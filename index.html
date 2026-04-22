@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro Estatal de Protocolos - SSJ Jalisco</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #166534;
+      --primary-dark: #052e16;
+      --primary-light: #f0fdf4;
+      --accent: #b45309;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #cbd5e1;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .page { padding: 20px; }
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      max-height: 92vh;
+    }
+
+    .header-branding {
+      background: var(--primary);
+      color: white;
+      padding: 15px 25px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .header-branding img {
+      height: 50px;
+      background: white;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .content { padding: 25px; overflow-y: auto; }
+
+    .section-header {
+      background: var(--primary-light);
+      padding: 8px 15px;
+      border-left: 4px solid var(--primary);
+      font-weight: 800;
+      color: var(--primary-dark);
+      margin: 25px 0 15px 0;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+
+    .field { margin-bottom: 18px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.85rem; color: #334155; }
+    
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    
+    input::placeholder, textarea::placeholder { color: #94a3b8; font-style: italic; opacity: 0.7; }
+    input:focus, textarea:focus, select:focus { border-color: var(--primary); outline: none; }
+    textarea { min-height: 90px; }
+
+    .equator-box {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .ods-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .ods-item {
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.65rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      background: #fff;
+    }
+
+    .ods-item.selected { color: white; border-color: transparent; }
+    .ods-icon { font-size: 1.2rem; margin-bottom: 4px; font-weight: 800; }
+
+    .actions {
+      padding: 15px 25px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: #64748b; color: white; }
+
+    /* Preview Pane */
+    .preview-pane { background: #64748b; padding: 30px; overflow-y: auto; height: 92vh; border-radius: var(--radius); }
+    .a4-doc {
+      background: white;
+      width: 100%;
+      min-height: 1120px;
+      padding: 60px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      font-size: 10pt;
+      color: #000;
+    }
+
+    .doc-header { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .doc-label { font-weight: bold; margin-top: 12px; font-size: 9.5pt; }
+    .doc-value { margin-bottom: 8px; padding-left: 10px; border-left: 2px solid #eee; text-align: justify; }
+    
+    .ods-preview-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      color: white;
+      border-radius: 4px;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      font-weight: bold;
+      font-size: 8pt;
+    }
+
+    #loadingOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center;
+      color: white; z-index: 1000; font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loadingOverlay">Procesando Documento...</div>
+
+<div class="page">
+  <div class="container">
+    <section class="card">
+      <div class="header-branding">
+        <img id="ssjLogoUi" src="https://portalesmuli.s3.amazonaws.com/ssj/original_images/LogoSalud.png" alt="SSJ" crossorigin="anonymous">
+        <div>
+          <h1 style="margin:0; font-size: 1rem;">Protocolo REI-JAL</h1>
+          <p style="margin:0; font-size: 0.7rem; opacity: 0.9;">Captura de Protocolos Oficiales SSJ</p>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="field">
+          <label>1. Título del Protocolo</label>
+          <textarea id="titulo" placeholder="Título completo..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>2. Planteamiento del problema</label>
+          <textarea id="planteamiento" placeholder="Justificación y contexto..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>3. Objetivo general</label>
+          <textarea id="objetivoGeneral" placeholder="¿Qué se pretende lograr?"></textarea>
+        </div>
+
+        <div class="section-header">Metodología y Diseño (EQUATOR)</div>
+        
+        <div class="field">
+          <label>4. Diseño de Estudio</label>
+          <select id="disenoSelect">
+            <option value="">Seleccione el diseño...</option>
+            <option value="Cohorte, retrospectivo, analítico" data-guide="STROBE">Cohorte - [STROBE]</option>
+            <option value="Casos y Controles" data-guide="STROBE">Casos y Controles - [STROBE]</option>
+            <option value="Transversal analítico / descriptivo" data-guide="STROBE">Estudio Transversal - [STROBE]</option>
+            <option value="Ensayo Clínico Aleatorizado" data-guide="CONSORT">Ensayo Clínico Aleatorizado - [CONSORT]</option>
+            <option value="Revisión Sistemática / Meta-análisis" data-guide="PRISMA">Revisión Sistemática - [PRISMA]</option>
+            <option value="Estudio de Precisión Diagnóstica" data-guide="STARD">Pruebas Diagnósticas - [STARD]</option>
+            <option value="Serie de Casos / Reporte de Caso" data-guide="CARE">Reporte de Casos - [CARE]</option>
+            <option value="Investigación Cualitativa" data-guide="SRQR">Estudio Cualitativo - [SRQR]</option>
+          </select>
+          
+          <div id="equatorInfo" class="equator-box" style="display:none;">
+            <div id="guideLabel" style="font-weight: bold; color: #0369a1; font-size: 0.8rem;"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>5. Métodos</label>
+          <textarea id="metodos" placeholder="Muestreo, selección y análisis..."></textarea>
+        </div>
+
+        <div class="section-header">Administración</div>
+        <div class="field">
+          <label>6. Institución a implementar</label>
+          <input type="text" id="institucion" placeholder="Nombre de la unidad médica">
+        </div>
+
+        <div class="field">
+          <label>7. Número de aprobación (Folio)</label>
+          <input type="text" id="folio" placeholder="Folio del comité">
+        </div>
+
+        <div class="field">
+          <label>8. Financiamiento</label>
+          <input type="text" id="financiamiento" placeholder="Fuente de recursos">
+        </div>
+
+        <div class="field">
+          <label>9. Conflicto de Interés</label>
+          <select id="conflictoStatus" style="margin-bottom: 10px;">
+            <option value="No existe conflicto de interés">No existe conflicto de interés</option>
+            <option value="Si existe conflicto">Sí existe conflicto de interés (especificar)</option>
+          </select>
+          <textarea id="conflictoDetalle" style="display: none;" placeholder="Describa el conflicto..."></textarea>
+        </div>
+
+        <div class="section-header">10. Objetivos de Desarrollo Sostenible (ODS)</div>
+        <div id="odsContainer" class="ods-grid"></div>
+      </div>
+
+      <div class="actions">
+        <button id="btnPdf" class="btn btn-primary">💾 Generar PDF Oficial</button>
+        <button id="btnReset" class="btn btn-secondary">🔄 Reiniciar</button>
+      </div>
+    </section>
+
+    <section class="preview-pane">
+      <div class="a4-doc" id="docPreview">
+        <div class="doc-header">
+          <div style="font-weight: bold; color: var(--primary); font-size: 14pt;">Salud</div>
+          <div style="text-align: right;">
+            <img src="https://portalesmuli.s3.amazonaws.com/ssj/original_images/LogoSalud.png" style="height: 40px;" crossorigin="anonymous">
+          </div>
+        </div>
+
+        <div style="text-align: center; font-weight: bold; margin-bottom: 25px; text-decoration: underline;">
+          Registro Estatal de Protocolos del Estado de Jalisco
+        </div>
+
+        <div id="prevContent"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  const { jsPDF } = window.jspdf;
+
+  const ids = ['titulo', 'planteamiento', 'objetivoGeneral', 'disenoSelect', 'metodos', 'institucion', 'folio', 'financiamiento'];
+  const labels = {
+    titulo: "1. Título",
+    planteamiento: "2. Planteamiento del problema",
+    objetivoGeneral: "3. Objetivo general",
+    disenoSelect: "4. Diseño",
+    metodos: "5. Métodos",
+    institucion: "6. Institución a implementar",
+    folio: "7. Número de aprobación",
+    financiamiento: "8. Financiamiento",
+    conflicto: "9. Conflicto de Interés"
+  };
+
+  const odsData = [
+    { n: 1, t: "Fin de la pobreza", c: "#E5243B" }, { n: 2, t: "Hambre cero", c: "#DDA63A" },
+    { n: 3, t: "Salud y bienestar", c: "#4C9F38" }, { n: 4, t: "Educación de calidad", c: "#C5192D" },
+    { n: 5, t: "Igualdad de género", c: "#FF3A21" }, { n: 6, t: "Agua limpia", c: "#26BDE2" },
+    { n: 7, t: "Energía asequible", c: "#FCC30B" }, { n: 8, t: "Trabajo decente", c: "#A21942" },
+    { n: 9, t: "Industria e innovación", c: "#FD6925" }, { n: 10, t: "Reducción desigualdades", c: "#DD1367" },
+    { n: 11, t: "Ciudades sostenibles", c: "#FD9D24" }, { n: 12, t: "Consumo responsable", c: "#BF8B2E" },
+    { n: 13, t: "Acción por el clima", c: "#3F7E44" }, { n: 14, t: "Vida submarina", c: "#0A97D9" },
+    { n: 15, t: "Vida terrestre", c: "#56C02B" }, { n: 16, t: "Paz y justicia", c: "#00689D" },
+    { n: 17, t: "Alianzas", c: "#19486A" }
+  ];
+
+  function init() {
+    const container = document.getElementById('odsContainer');
+    odsData.forEach(ods => {
+      const div = document.createElement('div');
+      div.className = 'ods-item';
+      div.dataset.n = ods.n;
+      div.innerHTML = `<span class="ods-icon">${ods.n}</span> ${ods.t}`;
+      div.onclick = () => { 
+        div.classList.toggle('selected'); 
+        div.style.backgroundColor = div.classList.contains('selected') ? ods.c : '#fff';
+        updatePreview(); 
+      };
+      container.appendChild(div);
+    });
+
+    ids.forEach(id => document.getElementById(id).addEventListener('input', () => {
+      if (id === 'disenoSelect') {
+        const sel = document.getElementById('disenoSelect');
+        const guide = sel.options[sel.selectedIndex].getAttribute('data-guide');
+        const box = document.getElementById('equatorInfo');
+        if (guide) {
+          box.style.display = 'block';
+          document.getElementById('guideLabel').innerText = `RECOMENDACIÓN EQUATOR: ${guide}`;
+        } else box.style.display = 'none';
+      }
+      updatePreview();
+    }));
+
+    const status = document.getElementById('conflictoStatus');
+    const detalle = document.getElementById('conflictoDetalle');
+    status.addEventListener('change', () => {
+      detalle.style.display = status.value === 'Si existe conflicto' ? 'block' : 'none';
+      updatePreview();
+    });
+    detalle.addEventListener('input', updatePreview);
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const prev = document.getElementById('prevContent');
+    let html = '';
+    ids.forEach(id => {
+      const val = document.getElementById(id).value || "[Vacio]";
+      html += `<div class="doc-label">${labels[id]}</div><div class="doc-value">${val.replace(/\n/g, '<br>')}</div>`;
+    });
+
+    const confVal = document.getElementById('conflictoStatus').value === 'Si existe conflicto' 
+                    ? document.getElementById('conflictoDetalle').value 
+                    : "No existe conflicto de interés";
+    html += `<div class="doc-label">9. Conflicto de Interés</div><div class="doc-value">${confVal || 'Sin detalle'}</div>`;
+    
+    const selected = Array.from(document.querySelectorAll('.ods-item.selected')).map(el => {
+      const data = odsData.find(o => o.n === parseInt(el.dataset.n));
+      return `<span class="ods-preview-badge" style="background:${data.c}">${data.n}. ${data.t}</span>`;
+    });
+    html += `<div class="doc-label">10. Objetivos de Desarrollo Sostenible</div><div class="doc-value">${selected.join('') || '[Sin selección]'}</div>`;
+    prev.innerHTML = html;
+  }
+
+  async function getBase64Logo() {
+    return new Promise((resolve) => {
+      const img = new Image();
+      // El proxy o crossorigin es vital para que jsPDF lo lea
+      img.setAttribute('crossOrigin', 'anonymous'); 
+      img.src = "https://portalesmuli.s3.amazonaws.com/ssj/original_images/LogoSalud.png";
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => {
+        console.warn("No se pudo cargar el logo para el PDF por CORS.");
+        resolve(null);
+      };
+    });
+  }
+
+  document.getElementById('btnPdf').addEventListener('click', async () => {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    const doc = new jsPDF();
+    const m = 25;
+    let y = 30;
+
+    // Obtener Logo con manejo de errores
+    const logoBase64 = await getBase64Logo();
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', 160, 15, 25, 20);
+    }
+    
+    doc.setTextColor(22, 101, 52);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("Salud", m, 25);
+    
+    doc.setTextColor(0); doc.setFontSize(11);
+    doc.text("Registro Estatal de Protocolos del Estado de Jalisco", 105, 40, {align: 'center'});
+    
+    y = 55;
+
+    const checkSpace = (needed) => {
+      if (y + needed > 275) {
+        doc.addPage();
+        y = 25;
+        // Re-imprimir cabecera mínima en nueva página
+        doc.setTextColor(22, 101, 52); doc.setFontSize(10);
+        doc.text("Salud - Registro de Protocolos", m, 15);
+        doc.setTextColor(0); y = 30;
+      }
+    };
+
+    // Procesar campos
+    [...ids, 'conflicto'].forEach(id => {
+      let val = "";
+      if (id === 'conflicto') {
+        val = document.getElementById('conflictoStatus').value === 'Si existe conflicto' 
+              ? document.getElementById('conflictoDetalle').value 
+              : "No existe conflicto de interés";
+      } else {
+        val = document.getElementById(id).value;
+      }
+      
+      const lines = doc.splitTextToSize(val || "N/A", 160);
+      checkSpace(12 + (lines.length * 5));
+
+      doc.setFontSize(9); doc.setFont("helvetica", "bold");
+      doc.text(labels[id], m, y); y += 6;
+      doc.setFontSize(10); doc.setFont("helvetica", "normal");
+      doc.text(lines, m, y);
+      y += (lines.length * 5) + 8;
+    });
+
+    // ODS Gráficos
+    checkSpace(30);
+    doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    doc.text("10. Objetivos de Desarrollo Sostenible (Agenda 2030):", m, y); y += 10;
+
+    const selectedItems = Array.from(document.querySelectorAll('.ods-item.selected')).map(el => parseInt(el.dataset.n));
+    let xPos = m;
+    selectedItems.forEach(num => {
+      const data = odsData.find(o => o.n === num);
+      if (xPos > 160) { xPos = m; y += 12; checkSpace(15); }
+
+      doc.setFillColor(data.c);
+      doc.rect(xPos, y - 5, 8, 8, 'F');
+      doc.setTextColor(255); doc.setFontSize(6);
+      doc.text(data.n.toString(), xPos + 4, y, {align: 'center'});
+      doc.setTextColor(0); doc.setFontSize(7);
+      doc.text(data.t.substring(0, 20), xPos + 10, y);
+      xPos += 45;
+    });
+
+    document.getElementById('loadingOverlay').style.display = 'none';
+    doc.save("Protocolo_Oficial_SSJ_Jalisco.pdf");
+  });
+
+  document.getElementById('btnReset').onclick = () => location.reload();
+  init();
+</script>
+</body>
+</html>
