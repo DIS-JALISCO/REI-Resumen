@@ -224,7 +224,9 @@
             <option value="Revisión Sistemática / Meta-análisis" data-guide="PRISMA">Revisión Sistemática - [PRISMA]</option>
             <option value="Estudio de Precisión Diagnóstica" data-guide="STARD">Pruebas Diagnósticas - [STARD]</option>
             <option value="Serie de Casos / Reporte de Caso" data-guide="CARE">Reporte de Casos - [CARE]</option>
-            <option value="Investigación Cualitativa" data-guide="SRQR">Estudio Cualitativo - [SRQR]</option>
+            <!-- Nuevas opciones agregadas según lineamientos EQUATOR -->
+            <option value="Diseños Cualitativos" data-guide="COREQ / SRQR">Diseños Cualitativos - [COREQ / SRQR]</option>
+            <option value="Métodos Mixtos" data-guide="GRAMMS">Métodos Mixtos - [GRAMMS]</option>
           </select>
           
           <div id="equatorInfo" class="equator-box" style="display:none;">
@@ -341,8 +343,12 @@
         const box = document.getElementById('equatorInfo');
         if (guide) {
           box.style.display = 'block';
+          box.style.backgroundColor = '#f0f9ff';
+          box.style.borderColor = '#bae6fd';
           document.getElementById('guideLabel').innerText = `RECOMENDACIÓN EQUATOR: ${guide}`;
-        } else box.style.display = 'none';
+        } else {
+          box.style.display = 'none';
+        }
       }
       updatePreview();
     }));
