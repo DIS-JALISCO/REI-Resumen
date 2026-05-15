@@ -178,11 +178,22 @@
       background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center;
       color: white; z-index: 1000; font-weight: bold;
     }
+
+    /* Notificaciones Toast y Contadores */
+    #toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 1050; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: #334155; color: #fff; padding: 12px 20px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); font-size: 0.9rem; font-weight: 600; opacity: 0; animation: slideIn 0.3s forwards, fadeOut 0.3s forwards 3s; }
+    .toast.success { background: var(--primary); border-left: 4px solid #14532d; }
+    .toast.error { background: #ef4444; border-left: 4px solid #991b1b; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; display: none; } }
+    
+    .char-counter { font-size: 0.75rem; color: #64748b; text-align: right; margin-top: 4px; font-weight: 600; }
   </style>
 </head>
 <body>
 
 <div id="loadingOverlay">Procesando Documento...</div>
+<div id="toastContainer"></div>
 
 <div class="page">
   <div class="container">
@@ -198,17 +209,20 @@
       <div class="content">
         <div class="field">
           <label>1. Título del Protocolo</label>
-          <textarea id="titulo" placeholder="Título completo..."></textarea>
+          <textarea id="titulo" placeholder="Título completo..." maxlength="300"></textarea>
+          <div class="char-counter" id="cc-titulo">0 / 300</div>
         </div>
 
         <div class="field">
           <label>2. Planteamiento del problema</label>
-          <textarea id="planteamiento" placeholder="Justificación y contexto..."></textarea>
+          <textarea id="planteamiento" placeholder="Justificación y contexto..." maxlength="2000"></textarea>
+          <div class="char-counter" id="cc-planteamiento">0 / 2000</div>
         </div>
 
         <div class="field">
           <label>3. Objetivo general</label>
-          <textarea id="objetivoGeneral" placeholder="¿Qué se pretende lograr?"></textarea>
+          <textarea id="objetivoGeneral" placeholder="¿Qué se pretende lograr?" maxlength="1000"></textarea>
+          <div class="char-counter" id="cc-objetivoGeneral">0 / 1000</div>
         </div>
 
         <div class="section-header">Metodología y Diseño (EQUATOR)</div>
@@ -224,7 +238,6 @@
             <option value="Revisión Sistemática / Meta-análisis" data-guide="PRISMA">Revisión Sistemática - [PRISMA]</option>
             <option value="Estudio de Precisión Diagnóstica" data-guide="STARD">Pruebas Diagnósticas - [STARD]</option>
             <option value="Serie de Casos / Reporte de Caso" data-guide="CARE">Reporte de Casos - [CARE]</option>
-            <!-- Nuevas opciones agregadas según lineamientos EQUATOR -->
             <option value="Diseños Cualitativos" data-guide="COREQ / SRQR">Diseños Cualitativos - [COREQ / SRQR]</option>
             <option value="Métodos Mixtos" data-guide="GRAMMS">Métodos Mixtos - [GRAMMS]</option>
           </select>
@@ -236,10 +249,12 @@
 
         <div class="field">
           <label>5. Métodos</label>
-          <textarea id="metodos" placeholder="Muestreo, selección y análisis..."></textarea>
+          <textarea id="metodos" placeholder="Muestreo, selección y análisis..." maxlength="3000"></textarea>
+          <div class="char-counter" id="cc-metodos">0 / 3000</div>
         </div>
 
         <div class="section-header">Administración</div>
+        
         <div class="field">
           <label>6. Institución a implementar</label>
           <input type="text" id="institucion" placeholder="Nombre de la unidad médica">
@@ -321,6 +336,84 @@
     { n: 17, t: "Alianzas", c: "#19486A" }
   ];
 
+  // Utilidad: Mostrar notificaciones Toast
+  function showToast(message, type = "success") {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  // Utilidad: Guardar estado en LocalStorage
+  function saveState() {
+    const data = {};
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) data[id] = el.value;
+    });
+    
+    const conflictoStatus = document.getElementById('conflictoStatus');
+    const conflictoDetalle = document.getElementById('conflictoDetalle');
+    if(conflictoStatus) data['conflictoStatus'] = conflictoStatus.value;
+    if(conflictoDetalle) data['conflictoDetalle'] = conflictoDetalle.value;
+    
+    data['ods'] = Array.from(document.querySelectorAll('.ods-item.selected')).map(el => el.dataset.n);
+    localStorage.setItem('protocoloDraft_SSJ', JSON.stringify(data));
+  }
+
+  // Utilidad: Cargar estado de LocalStorage
+  function loadState() {
+    const saved = localStorage.getItem('protocoloDraft_SSJ');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        ids.forEach(id => { 
+          const el = document.getElementById(id);
+          if(el && data[id]) el.value = data[id]; 
+        });
+        
+        const conflictoStatus = document.getElementById('conflictoStatus');
+        const conflictoDetalle = document.getElementById('conflictoDetalle');
+        
+        if(data['conflictoStatus'] && conflictoStatus) {
+          conflictoStatus.value = data['conflictoStatus'];
+          if(conflictoDetalle) {
+            conflictoDetalle.style.display = data['conflictoStatus'] === 'Si existe conflicto' ? 'block' : 'none';
+          }
+        }
+        if(data['conflictoDetalle'] && conflictoDetalle) {
+          conflictoDetalle.value = data['conflictoDetalle'];
+        }
+        
+        if(data['ods']) {
+          data['ods'].forEach(n => {
+            const el = document.querySelector(`.ods-item[data-n="${n}"]`);
+            if(el) {
+              el.classList.add('selected');
+              el.style.backgroundColor = odsData.find(o => o.n == parseInt(n)).c;
+            }
+          });
+        }
+        
+        if(data['titulo']) showToast("Borrador automático recuperado", "success");
+      } catch(e) { console.error("Error cargando borrador", e); }
+    }
+  }
+
+  // Utilidad: Actualizar contadores de caracteres
+  function updateCounters() {
+    ['titulo', 'planteamiento', 'objetivoGeneral', 'metodos'].forEach(id => {
+      const el = document.getElementById(id);
+      const counter = document.getElementById(`cc-${id}`);
+      if(el && counter) {
+        counter.innerText = `${el.value.length} / ${el.maxLength}`;
+        counter.style.color = el.value.length >= el.maxLength ? '#ef4444' : '#64748b';
+      }
+    });
+  }
+
   function init() {
     const container = document.getElementById('odsContainer');
     odsData.forEach(ods => {
@@ -332,47 +425,76 @@
         div.classList.toggle('selected'); 
         div.style.backgroundColor = div.classList.contains('selected') ? ods.c : '#fff';
         updatePreview(); 
+        saveState();
       };
       container.appendChild(div);
     });
 
-    ids.forEach(id => document.getElementById(id).addEventListener('input', () => {
-      if (id === 'disenoSelect') {
-        const sel = document.getElementById('disenoSelect');
-        const guide = sel.options[sel.selectedIndex].getAttribute('data-guide');
-        const box = document.getElementById('equatorInfo');
-        if (guide) {
-          box.style.display = 'block';
-          box.style.backgroundColor = '#f0f9ff';
-          box.style.borderColor = '#bae6fd';
-          document.getElementById('guideLabel').innerText = `RECOMENDACIÓN EQUATOR: ${guide}`;
-        } else {
-          box.style.display = 'none';
-        }
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if(el) {
+        el.addEventListener('input', () => {
+          if (id === 'disenoSelect') {
+            const sel = document.getElementById('disenoSelect');
+            const guide = sel.options[sel.selectedIndex].getAttribute('data-guide');
+            const box = document.getElementById('equatorInfo');
+            if (guide) {
+              box.style.display = 'block';
+              box.style.backgroundColor = '#f0f9ff';
+              box.style.borderColor = '#bae6fd';
+              document.getElementById('guideLabel').innerText = `RECOMENDACIÓN EQUATOR: ${guide}`;
+            } else {
+              box.style.display = 'none';
+            }
+          }
+          updateCounters();
+          updatePreview();
+          saveState();
+        });
       }
-      updatePreview();
-    }));
+    });
 
     const status = document.getElementById('conflictoStatus');
     const detalle = document.getElementById('conflictoDetalle');
-    status.addEventListener('change', () => {
-      detalle.style.display = status.value === 'Si existe conflicto' ? 'block' : 'none';
-      updatePreview();
-    });
-    detalle.addEventListener('input', updatePreview);
+    if (status && detalle) {
+      status.addEventListener('change', () => {
+        detalle.style.display = status.value === 'Si existe conflicto' ? 'block' : 'none';
+        updatePreview();
+        saveState();
+      });
+      detalle.addEventListener('input', () => {
+        updatePreview();
+        saveState();
+      });
+    }
+    
+    // Ejecutar inicializadores
+    loadState();
+    updateCounters();
     updatePreview();
+    
+    // Forzar actualización del recuadro EQUATOR al cargar el estado si había algo seleccionado
+    const ds = document.getElementById('disenoSelect');
+    if(ds) ds.dispatchEvent(new Event('input'));
   }
 
   function updatePreview() {
     const prev = document.getElementById('prevContent');
+    if(!prev) return;
+    
     let html = '';
     ids.forEach(id => {
-      const val = document.getElementById(id).value || "[Vacio]";
-      html += `<div class="doc-label">${labels[id]}</div><div class="doc-value">${val.replace(/\n/g, '<br>')}</div>`;
+      const el = document.getElementById(id);
+      const val = el ? el.value : "";
+      const displayVal = val || "[Vacio]";
+      html += `<div class="doc-label">${labels[id]}</div><div class="doc-value">${displayVal.replace(/\n/g, '<br>')}</div>`;
     });
 
-    const confVal = document.getElementById('conflictoStatus').value === 'Si existe conflicto' 
-                    ? document.getElementById('conflictoDetalle').value 
+    const statusEl = document.getElementById('conflictoStatus');
+    const detalleEl = document.getElementById('conflictoDetalle');
+    
+    const confVal = (statusEl && statusEl.value === 'Si existe conflicto')
+                    ? (detalleEl ? detalleEl.value : "") 
                     : "No existe conflicto de interés";
     html += `<div class="doc-label">9. Conflicto de Interés</div><div class="doc-value">${confVal || 'Sin detalle'}</div>`;
     
@@ -407,6 +529,20 @@
   }
 
   document.getElementById('btnPdf').addEventListener('click', async () => {
+    const tituloEl = document.getElementById('titulo');
+    const disenoEl = document.getElementById('disenoSelect');
+    
+    if (!tituloEl.value.trim()) {
+      showToast("El Título del Protocolo es obligatorio", "error");
+      tituloEl.focus();
+      return;
+    }
+    if (!disenoEl.value) {
+      showToast("Debe seleccionar un Diseño de Estudio", "error");
+      disenoEl.focus();
+      return;
+    }
+
     document.getElementById('loadingOverlay').style.display = 'flex';
     const doc = new jsPDF();
     const m = 25;
@@ -442,18 +578,21 @@
     [...ids, 'conflicto'].forEach(id => {
       let val = "";
       if (id === 'conflicto') {
-        val = document.getElementById('conflictoStatus').value === 'Si existe conflicto' 
-              ? document.getElementById('conflictoDetalle').value 
+        const statusEl = document.getElementById('conflictoStatus');
+        const detalleEl = document.getElementById('conflictoDetalle');
+        val = (statusEl && statusEl.value === 'Si existe conflicto') 
+              ? (detalleEl ? detalleEl.value : "") 
               : "No existe conflicto de interés";
       } else {
-        val = document.getElementById(id).value;
+        const el = document.getElementById(id);
+        val = el ? el.value : "";
       }
       
       const lines = doc.splitTextToSize(val || "N/A", 160);
       checkSpace(12 + (lines.length * 5));
 
       doc.setFontSize(9); doc.setFont("helvetica", "bold");
-      doc.text(labels[id], m, y); y += 6;
+      doc.text(labels[id] || id, m, y); y += 6;
       doc.setFontSize(10); doc.setFont("helvetica", "normal");
       doc.text(lines, m, y);
       y += (lines.length * 5) + 8;
@@ -468,22 +607,32 @@
     let xPos = m;
     selectedItems.forEach(num => {
       const data = odsData.find(o => o.n === num);
-      if (xPos > 160) { xPos = m; y += 12; checkSpace(15); }
+      if(data) {
+        if (xPos > 160) { xPos = m; y += 12; checkSpace(15); }
 
-      doc.setFillColor(data.c);
-      doc.rect(xPos, y - 5, 8, 8, 'F');
-      doc.setTextColor(255); doc.setFontSize(6);
-      doc.text(data.n.toString(), xPos + 4, y, {align: 'center'});
-      doc.setTextColor(0); doc.setFontSize(7);
-      doc.text(data.t.substring(0, 20), xPos + 10, y);
-      xPos += 45;
+        doc.setFillColor(data.c);
+        doc.rect(xPos, y - 5, 8, 8, 'F');
+        doc.setTextColor(255); doc.setFontSize(6);
+        doc.text(data.n.toString(), xPos + 4, y, {align: 'center'});
+        doc.setTextColor(0); doc.setFontSize(7);
+        doc.text(data.t.substring(0, 20), xPos + 10, y);
+        xPos += 45;
+      }
     });
 
     document.getElementById('loadingOverlay').style.display = 'none';
     doc.save("Protocolo_Oficial_SSJ_Jalisco.pdf");
+    showToast("PDF generado correctamente", "success");
   });
 
-  document.getElementById('btnReset').onclick = () => location.reload();
+  document.getElementById('btnReset').onclick = () => {
+    if(confirm("¿Estás seguro de que deseas reiniciar? Se borrarán todos los datos capturados.")) {
+      localStorage.removeItem('protocoloDraft_SSJ');
+      location.reload();
+    }
+  };
+
+  // Iniciar la app
   init();
 </script>
 </body>
